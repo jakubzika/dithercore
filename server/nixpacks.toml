@@ -1,0 +1,16 @@
+
+[phases.setup]
+# Ensure we have Node.js and pnpm (since you're using pnpm)
+nixPkgs = ["nodejs_18", "pnpm"]
+
+[phases.install]
+# Install dependencies using pnpm
+cmds = ["pnpm install"]
+
+[phases.build]
+# No build step needed for this simple server
+cmds = []
+
+[start]
+# Start the server using the start script from package.json
+cmd = "pnpm start"
