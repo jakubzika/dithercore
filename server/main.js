@@ -10,13 +10,18 @@ let downloadClients = new Set();
 const fs = require('fs');
 
 // Read HTML file once at startup
-const indexHTML = fs.readFileSync('index.html', 'utf8');
 
 // Replace the existing server creation with:
 const server = http.createServer((req, res) => {
-    if (req.url === '/') {
+    const url_parts = url.parse(req.url)
+    if (url_parts.pathname === '/') {
+        const indexHTML = fs.readFileSync('index.html', 'utf8');
         res.writeHead(200, { 'Content-Type': 'text/html' });
         res.end(indexHTML);
+    } else {
+        console.log('unknown url', req.pathname)
+        res.writeHead(404, { 'Content-Type': 'text/html' });
+        res.end("404");
     }
 });
 
@@ -143,7 +148,7 @@ process.on('SIGINT', () => {
     wss.close(() => {
         server.close(() => {
             console.log('Server closed');
-            process.exit(0);
         });
     });
+    process.exit(0);
 });

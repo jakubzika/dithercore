@@ -14,6 +14,7 @@
         canvas {
             border: 1px solid #ccc;
             margin: 10px;
+            image-rendering: pixelated;
         }
 
         video {
@@ -52,18 +53,26 @@
             background-color: #f8d7da;
             color: #721c24;
         }
+
+        #preview {
+            display: none;
+        }
+
+        #dithered {
+            width: 256px;
+            height: 256px;
+        }
     </style>
 </head>
 
 <body>
     <h1>WebCam to NodeMCU Display</h1>
     <div class="container">
-        <div id="status" class="status disconnected">WebSocket: Disconnected</div>
 
-        <video id="webcam" width="300" height="300" autoplay></video>
+        <video id="webcam" width="256" height="256" autoplay muted playsinline></video>
         <canvas id="preview" width="128" height="128"></canvas>
         <canvas id="dithered" width="128" height="128"></canvas><br>
-        <label>WebCam → Scaled → Dithered (128x128)</label><br>
+        <div id="status" class="status disconnected">WebSocket: Disconnected</div>
 
         <button onclick="startWebcam()">Start WebCam</button>
         <button onclick="stopWebcam()">Stop WebCam</button>
@@ -86,7 +95,25 @@
         const ditheredCanvas = document.getElementById('dithered');
         const ditheredCtx = ditheredCanvas.getContext('2d');
         const statusDiv = document.getElementById('status');
+
+        const searchParam = new URLSearchParams(window.location.search)
+
+        async function start() {
+            await startWebcam()
+            toggleStreaming()
+        }
+
         let base64Data = '';
+
+        window.addEventListener('load', () => {
+            if (searchParam.get('autoplay') == 'false') {
+                console.log('no autplay')
+            } else {
+                console.log('autoplay')
+                start()
+            }
+        })
+
 
         async function startWebcam() {
             try {
@@ -97,6 +124,7 @@
                         aspectRatio: 1.0
                     }
                 });
+
                 video.srcObject = webcamStream;
             } catch (error) {
                 alert('Error accessing webcam: ' + error.message);
@@ -115,8 +143,12 @@
         function connectWebSocket() {
             if (ws && ws.readyState === WebSocket.OPEN) return;
 
-            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}/upload`;
+            const protocol = window.location.protocol === 'https' ? 'wss' : 'ws';
+            // const protocol = 'wss'
+            // const host = 'dithercore.jakubzika.com'
+            const host = window.location.host
+            const wsUrl = `${protocol}://${host}/upload`;
+            console.log(wsUrl)
 
             ws = new WebSocket(wsUrl);
 
@@ -258,7 +290,7 @@
                 streamInterval = setInterval(() => {
                     captureAndProcess();
                     sendFrame();
-                }, 200); // 5 FPS
+                }, 1000);
 
                 document.querySelector('button[onclick="toggleStreaming()"]').textContent = 'Stop Streaming';
             } else {
