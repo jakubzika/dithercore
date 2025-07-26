@@ -29,8 +29,40 @@
         }
 
         button {
-            padding: 10px 20px;
+            padding: 15px 25px;
             margin: 10px;
+            font-size: 16px;
+            cursor: pointer;
+            border: none;
+            border-radius: 5px;
+            background-color: #007bff;
+            color: white;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        button:active {
+            background-color: #004085;
+        }
+
+        #flipCameraBtn {
+            background-color: #28a745;
+            display: none;
+        }
+
+        #flipCameraBtn:hover {
+            background-color: #218838;
+        }
+
+        #flipCameraBtn:active {
+            background-color: #1e7e34;
+        }
+
+        .button-row {
+            margin: 10px 0;
         }
 
         .container {
@@ -74,10 +106,15 @@
         <canvas id="dithered" width="128" height="128"></canvas><br>
         <div id="status" class="status disconnected">WebSocket: Disconnected</div>
 
-        <button onclick="startWebcam()">Start WebCam</button>
-        <button onclick="stopWebcam()">Stop WebCam</button>
-        <button onclick="connectWebSocket()">Connect WebSocket</button>
-        <button onclick="toggleStreaming()">Start Streaming</button>
+        <div class="button-row">
+            <button id="flipCameraBtn" onclick="flipCamera()">Flip Camera</button>
+        </div>
+        <div class="button-row">
+            <button onclick="startWebcam()">Start WebCam</button>
+            <button onclick="stopWebcam()">Stop WebCam</button>
+            <button onclick="connectWebSocket()">Connect WebSocket</button>
+            <button onclick="toggleStreaming()">Start Streaming</button>
+        </div>
     </div>
 
     <h3>Base64 Output:</h3>
@@ -88,6 +125,8 @@
         let ws = null;
         let streaming = false;
         let streamInterval = null;
+        let currentFacingMode = 'user'; // 'user' for front camera, 'environment' for back camera
+        let cameras = [];
 
         const video = document.getElementById('webcam');
         const canvas = document.getElementById('preview');
@@ -95,6 +134,7 @@
         const ditheredCanvas = document.getElementById('dithered');
         const ditheredCtx = ditheredCanvas.getContext('2d');
         const statusDiv = document.getElementById('status');
+        const flipCameraBtn = document.getElementById('flipCameraBtn');
 
         const searchParam = new URLSearchParams(window.location.search)
 
@@ -106,7 +146,10 @@
 
         let base64Data = '';
 
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => {
+            // Check for available cameras
+            await checkCameras();
+
             if (searchParam.get('autoplay') == 'false') {
                 console.log('no autplay')
             } else {
@@ -115,21 +158,70 @@
             }
         })
 
+        async function checkCameras() {
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                console.log(devices)
+                cameras = devices.filter(device => device.kind === 'videoinput');
+
+                // Show flip button only if there are multiple cameras
+                if (cameras.length > 1) {
+                    console.log('more cams detected')
+                    flipCameraBtn.style.display = 'inline-block';
+                } else {
+                    console.log('no more cams')
+                }
+            } catch (error) {
+                console.error('Error checking cameras:', error);
+            }
+        }
 
         async function startWebcam() {
             try {
-                webcamStream = await navigator.mediaDevices.getUserMedia({
+                const constraints = {
                     video: {
                         width: 300,
                         height: 300,
-                        aspectRatio: 1.0
+                        aspectRatio: 1.0,
+                        facingMode: currentFacingMode
                     }
-                });
+                };
 
+                // Stop existing stream if any
+                if (webcamStream) {
+                    webcamStream.getTracks().forEach(track => track.stop());
+                }
+
+                webcamStream = await navigator.mediaDevices.getUserMedia(constraints);
                 video.srcObject = webcamStream;
             } catch (error) {
-                alert('Error accessing webcam: ' + error.message);
+                // If facingMode fails, try without it
+                try {
+                    webcamStream = await navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: 300,
+                            height: 300,
+                            aspectRatio: 1.0
+                        }
+                    });
+                    video.srcObject = webcamStream;
+                } catch (fallbackError) {
+                    alert('Error accessing webcam: ' + fallbackError.message);
+                }
             }
+        }
+
+        async function flipCamera() {
+            if (!webcamStream) {
+                alert('Please start webcam first!');
+                return;
+            }
+
+            // Toggle facing mode
+            currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+
+            // Restart webcam with new facing mode
+            await startWebcam();
         }
 
         function stopWebcam() {
