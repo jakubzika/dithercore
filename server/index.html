@@ -99,6 +99,7 @@
         const searchParam = new URLSearchParams(window.location.search)
 
         async function start() {
+            await connectWebSocket();
             await startWebcam()
             toggleStreaming()
         }
@@ -141,31 +142,35 @@
         }
 
         function connectWebSocket() {
-            if (ws && ws.readyState === WebSocket.OPEN) return;
+            return new Promise((res, rej) => {
+                if (ws && ws.readyState === WebSocket.OPEN) return;
 
-            const protocol = window.location.protocol === 'https' ? 'wss' : 'ws';
-            // const protocol = 'wss'
-            // const host = 'dithercore.jakubzika.com'
-            const host = window.location.host
-            const wsUrl = `${protocol}://${host}/upload`;
-            console.log(wsUrl)
+                const protocol = window.location.protocol === 'https' ? 'wss' : 'ws';
+                // const protocol = 'wss'
+                // const host = 'dithercore.jakubzika.com'
+                const host = window.location.host
+                const wsUrl = `${protocol}://${host}/upload`;
+                console.log(wsUrl)
 
-            ws = new WebSocket(wsUrl);
+                ws = new WebSocket(wsUrl);
 
-            ws.onopen = function () {
-                statusDiv.textContent = 'WebSocket: Connected';
-                statusDiv.className = 'status connected';
-            };
+                ws.onopen = function () {
+                    statusDiv.textContent = 'WebSocket: Connected';
+                    statusDiv.className = 'status connected';
+                    res()
+                };
 
-            ws.onclose = function () {
-                statusDiv.textContent = 'WebSocket: Disconnected';
-                statusDiv.className = 'status disconnected';
-                if (streaming) toggleStreaming();
-            };
+                ws.onclose = function () {
+                    statusDiv.textContent = 'WebSocket: Disconnected';
+                    statusDiv.className = 'status disconnected';
+                    if (streaming) toggleStreaming();
+                };
 
-            ws.onerror = function (error) {
-                console.error('WebSocket error:', error);
-            };
+                ws.onerror = function (error) {
+                    console.error('WebSocket error:', error);
+                    rej()
+                };
+            })
         }
 
         function captureAndProcess() {
@@ -304,7 +309,6 @@
         }
 
         // Auto-connect WebSocket on page load
-        connectWebSocket();
     </script>
 </body>
 
