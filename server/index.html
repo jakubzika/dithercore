@@ -145,7 +145,7 @@
             return new Promise((res, rej) => {
                 if (ws && ws.readyState === WebSocket.OPEN) return;
 
-                const protocol = window.location.protocol === 'https' ? 'wss' : 'ws';
+                const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
                 // const protocol = 'wss'
                 // const host = 'dithercore.jakubzika.com'
                 const host = window.location.host
