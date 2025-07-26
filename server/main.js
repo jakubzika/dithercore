@@ -61,7 +61,7 @@ function handleUploadConnection(ws) {
             if (message.type === 'frame' && message.data) {
                 // Update global frame
                 currentFrame = message.data;
-                console.log(`Frame updated (${message.data.length} chars)`);
+                // console.log(`Frame updated (${message.data.length} chars)`);
             }
         } catch (error) {
             console.error('Error parsing upload message:', error);
