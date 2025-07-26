@@ -2,46 +2,74 @@
 <html>
 
 <head>
-    <title>WebCam to NodeMCU Display</title>
+    <title>DITHERCORE</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            max-width: 800px;
+            font-family: sans-serif;
+            max-width: 900px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 10px;
         }
+
+        .container {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            /* grid-auto-flow: column; */
+            gap: 20px;
+            text-align: center;
+        }
+
+        /* Row 1: Video and Canvas views */
 
         canvas {
             border: 1px solid #ccc;
-            margin: 10px;
             image-rendering: pixelated;
         }
 
         video {
             border: 1px solid #ccc;
-            margin: 10px;
+            width: 100%;
+            grid-column: span 2;
         }
 
-        textarea {
+
+
+        #dithered {
             width: 100%;
-            height: 150px;
-            font-family: monospace;
+            grid-column: span 2;
+        }
+
+        #preview {
+            display: none;
+        }
+
+        /* Row 2: Flip button */
+        .flip-button-row {
+            grid-column: span 4;
+
+        }
+
+        /* Row 4: Base64 output */
+        .base64-row {
+            grid-column: span 4;
         }
 
         button {
-            padding: 15px 25px;
-            margin: 10px;
-            font-size: 16px;
+            padding: 20px 20px;
+            font-size: 1.5em;
             cursor: pointer;
-            border: none;
-            border-radius: 5px;
-            background-color: #007bff;
-            color: white;
+            border-top: 3px solid #eaebee;
+            border-left: 3px solid #d5d5db;
+            border-bottom: 3px solid #95959d;
+            border-right: 3px solid #5d5d61;
+            border-radius: 2px;
+            background-color: #e6e6e6;
+            color: black;
             transition: background-color 0.3s;
         }
 
         button:hover {
-            background-color: #0056b3;
+            background-color: #b3b1b1;
         }
 
         button:active {
@@ -50,7 +78,9 @@
 
         #flipCameraBtn {
             background-color: #28a745;
-            display: none;
+            padding: 15px 60px;
+            width: 100%;
+            grid-column: span 4;
         }
 
         #flipCameraBtn:hover {
@@ -61,19 +91,18 @@
             background-color: #1e7e34;
         }
 
-        .button-row {
-            margin: 10px 0;
-        }
-
-        .container {
-            text-align: center;
+        textarea {
+            width: 100%;
+            height: 150px;
+            font-family: monospace;
         }
 
         .status {
             padding: 10px;
-            margin: 10px;
             border-radius: 5px;
             font-weight: bold;
+            grid-column: span 4;
+
         }
 
         .connected {
@@ -86,39 +115,43 @@
             color: #721c24;
         }
 
-        #preview {
-            display: none;
-        }
-
-        #dithered {
-            width: 256px;
-            height: 256px;
+        h3 {
+            margin: 0 0 10px 0;
+            text-align: left;
         }
     </style>
 </head>
 
 <body>
-    <h1>WebCam to NodeMCU Display</h1>
+    <h1>DITHERCORE</h1>
+
     <div class="container">
-
-        <video id="webcam" width="256" height="256" autoplay muted playsinline></video>
+        <!-- Row 1: Video and Canvas views -->
+        <video id="webcam" width="350" height="350" autoplay muted playsinline></video>
+        <canvas id="dithered" width="128" height="128"></canvas>
         <canvas id="preview" width="128" height="128"></canvas>
-        <canvas id="dithered" width="128" height="128"></canvas><br>
+
+        <!-- Row 2: Flip button -->
+        <button id="flipCameraBtn" onclick="flipCamera()">Flip Camera</button>
+        <div class="flip-button-row">
+        </div>
+
+        <!-- Row 3: Control buttons -->
+        <button onclick="startWebcam()">Start WebCam</button>
+        <button onclick="stopWebcam()">Stop WebCam</button>
+        <button onclick="connectWebSocket()">Connect WebSocket</button>
+        <button onclick="toggleStreaming()">Start Streaming</button>
+
+
+        <!-- Row 4: Base64 output -->
+        <div class="base64-row">
+            <h3>Base64 Output:</h3>
+            <textarea id="base64Output" readonly></textarea>
+        </div>
+
+        <!-- Row 5: Status -->
         <div id="status" class="status disconnected">WebSocket: Disconnected</div>
-
-        <div class="button-row">
-            <button id="flipCameraBtn" onclick="flipCamera()">Flip Camera</button>
-        </div>
-        <div class="button-row">
-            <button onclick="startWebcam()">Start WebCam</button>
-            <button onclick="stopWebcam()">Stop WebCam</button>
-            <button onclick="connectWebSocket()">Connect WebSocket</button>
-            <button onclick="toggleStreaming()">Start Streaming</button>
-        </div>
     </div>
-
-    <h3>Base64 Output:</h3>
-    <textarea id="base64Output" readonly></textarea>
 
     <script>
         let webcamStream = null;
@@ -158,9 +191,13 @@
             }
         })
 
+        const wait = (time) => new Promise(res => setTimeout(res, time))
+
         async function checkCameras() {
             try {
-                const devices = await navigator.mediaDevices.enumerateDevices();
+                let devices = await navigator.mediaDevices.enumerateDevices();
+                await wait(1000)
+                devices = await navigator.mediaDevices.enumerateDevices();
                 console.log(devices)
                 cameras = devices.filter(device => device.kind === 'videoinput');
 
